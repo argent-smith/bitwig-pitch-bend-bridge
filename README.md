@@ -21,7 +21,7 @@ Bitwig has no device or Grid module that sends channel Pitch Bend. This script f
 
 ## Installation
 
-1. Copy `PitchBendBridge.control.js` into the `Controller Scripts` folder of your Bitwig Studio user directory, for example `~/Documents/Bitwig Studio/Controller Scripts/` on macOS or `Documents\Bitwig Studio\Controller Scripts\` on Windows.
+1. Download `PitchBendBridge.control.js` from the [latest release](https://github.com/argent-smith/bitwig-pitch-bend-bridge/releases/latest) and copy it into the `Controller Scripts` folder of your Bitwig Studio user directory, for example `~/Documents/Bitwig Studio/Controller Scripts/` on macOS or `Documents\Bitwig Studio\Controller Scripts\` on Windows.
 2. In Bitwig: **Settings → Controllers → Add Controller → Mostly Random → Pitch Bend Bridge**.
 3. Choose the **MIDI output** port of your instrument.
 
@@ -78,12 +78,22 @@ can be installed next to the script. Building requires a JDK 17+ and
 
 ```sh
 sbt test        # run the unit tests
+sbt scalafmtAll # format the code
 sbt assembly    # build target/PitchBendBridge.bwextension
 ```
 
 Copy `target/PitchBendBridge.bwextension` into the `Extensions` folder of your
 Bitwig Studio user directory, for example
-`~/Documents/Bitwig Studio/Extensions/` on macOS.
+`~/Documents/Bitwig Studio/Extensions/` on macOS. Each
+[release](https://github.com/argent-smith/bitwig-pitch-bend-bridge/releases)
+also has a ready-built `.bwextension` attached.
+
+### Continuous integration
+
+GitHub Actions runs both test suites, checks formatting and builds the
+extension on every pull request and push to `main`. Pushing a `v*` tag whose
+version matches `build.sbt`, the extension definition and the script publishes
+a GitHub release with both files.
 
 For VSCode, install the recommended Metals extension and open the repository
 folder; Metals imports the sbt build automatically.

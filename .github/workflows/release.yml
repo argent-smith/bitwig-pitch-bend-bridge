@@ -1,0 +1,54 @@
+# Publishes a GitHub release for a version tag (v0.2, v1.0, ...) with the
+# JavaScript script and the .bwextension built and tested by ci.yml.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  version:
+    name: Tag matches versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check build.sbt, the extension definition and the script
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          status=0
+          grep -qF "version := \"$v\"," build.sbt || { echo "::error file=build.sbt::version is not $v"; status=1; }
+          grep -qF "getVersion: String = \"$v\"" src/main/scala/pitchbendbridge/PitchBendBridgeDefinition.scala \
+            || { echo "::error file=src/main/scala/pitchbendbridge/PitchBendBridgeDefinition.scala::getVersion is not $v"; status=1; }
+          grep -qF "\"$v\"," PitchBendBridge.control.js \
+            || { echo "::error file=PitchBendBridge.control.js::defineController version is not $v"; status=1; }
+          exit $status
+
+  ci:
+    needs: version
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: GitHub release
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: bwextension
+          path: target
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Pitch Bend Bridge $GITHUB_REF_NAME" \
+            --generate-notes \
+            PitchBendBridge.control.js \
+            target/PitchBendBridge.bwextension

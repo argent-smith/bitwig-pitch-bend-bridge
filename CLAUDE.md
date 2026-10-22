@@ -121,7 +121,19 @@ Build notes:
 - `scalacOptions` enable `-Wunused:all`, `-Wvalue-discard`,
   `-Wnonunit-statement` and `-Wsafe-init`; the build must compile without
   warnings. `.scalafmt.conf` rewrites to Scala 3 syntax without optional
-  braces.
+  braces; `sbt scalafmtAll` applies it. sbt-scalafmt needs sbt 1.12.9+.
+
+## CI and releases
+
+- `.github/workflows/ci.yml` runs on pushes to `main` and on pull requests:
+  `node test/mock-host.test.js`, then
+  `sbt scalafmtCheckAll scalafmtSbtCheck test assembly`, and uploads the
+  `.bwextension` as an artifact.
+- `.github/workflows/release.yml` runs on a `v*` tag. It checks that the tag
+  matches the version in `build.sbt`, `PitchBendBridgeDefinition.getVersion`
+  and `host.defineController`, reuses `ci.yml`, and publishes a GitHub release
+  with `PitchBendBridge.control.js` and the `.bwextension` from that run. To
+  release, bump all three versions, merge, then push the tag.
 
 The editor setup targets VSCode with Metals (`.vscode/`, `.scalafmt.conf`);
 Metals imports the sbt build through Bloop.
