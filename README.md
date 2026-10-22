@@ -91,9 +91,13 @@ also has a ready-built `.bwextension` attached.
 ### Continuous integration
 
 GitHub Actions runs both test suites, checks formatting and builds the
-extension on every pull request and push to `main`. Pushing a `v*` tag whose
-version matches `build.sbt`, the extension definition and the script publishes
-a GitHub release with both files.
+extension on every pull request and push to `main`.
+
+To release, run **Actions → Release → Run workflow** on `main` and enter a
+[SemVer](https://semver.org/) version such as `0.2.0` (or `0.2.0-rc.1` for a
+prerelease). The workflow sets the version in the script and the build, tests
+and builds both forms, tags the release commit and publishes a GitHub release
+with `PitchBendBridge.control.js` and `PitchBendBridge.bwextension`.
 
 For VSCode, install the recommended Metals extension and open the repository
 folder; Metals imports the sbt build automatically.

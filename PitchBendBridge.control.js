@@ -18,7 +18,7 @@ loadAPI(18);
 host.defineController(
   "Mostly Random",
   "Pitch Bend Bridge",
-  "0.1",
+  "0.1.0",
   "ff438bf3-4285-4c49-8754-ada9b8ec42e9",
   "Pavel Argentov"
 );

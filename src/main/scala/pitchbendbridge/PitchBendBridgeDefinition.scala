@@ -14,7 +14,7 @@ final class PitchBendBridgeDefinition extends ControllerExtensionDefinition:
 
   override def getName: String = "Pitch Bend Bridge (Scala)"
   override def getAuthor: String = "Pavel Argentov"
-  override def getVersion: String = "0.1"
+  override def getVersion: String = BuildInfo.version
 
   // Differs from the JavaScript script's UUID so both can be installed side by side.
   override def getId: UUID = UUID.fromString("b8eefa16-25aa-465a-9fbf-abef4b3160f7")

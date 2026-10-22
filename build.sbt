@@ -5,10 +5,14 @@
 
 ThisBuild / scalaVersion := "3.8.4"
 
+// The version lives in version.sbt, where the release workflow sets it, and
+// reaches the extension definition through BuildInfo.
 lazy val root = (project in file("."))
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "pitch-bend-bridge",
-    version := "0.1",
+    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoPackage := "pitchbendbridge",
     resolvers += "Bitwig" at "https://maven.bitwig.com",
     libraryDependencies ++= Seq(
       // Provided by Bitwig at runtime; kept out of the assembled jar.

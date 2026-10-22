@@ -1,0 +1,37 @@
+name: Verify
+description: >-
+  Checks that the script and the build share a version, runs both test suites,
+  checks formatting and builds target/PitchBendBridge.bwextension.
+
+runs:
+  using: composite
+  steps:
+    - name: Check that the script and the build share a version
+      shell: bash
+      run: |
+        v=$(sed -n 's/^ThisBuild \/ version := "\(.*\)"$/\1/p' version.sbt)
+        if [ -z "$v" ]; then
+          echo "::error file=version.sbt::no version found"
+          exit 1
+        fi
+        if ! grep -qxF "  \"$v\"," PitchBendBridge.control.js; then
+          echo "::error file=PitchBendBridge.control.js::host.defineController version is not $v"
+          exit 1
+        fi
+
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 24
+    - name: Test the JavaScript script
+      shell: bash
+      run: node test/mock-host.test.js
+
+    - uses: actions/setup-java@v6
+      with:
+        distribution: temurin
+        java-version: 21 # as shipped with Bitwig 5
+        cache: sbt
+    - uses: sbt/setup-sbt@v1
+    - name: Check formatting, test and build the extension
+      shell: bash
+      run: sbt scalafmtCheckAll scalafmtSbtCheck test assembly

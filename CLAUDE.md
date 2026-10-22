@@ -125,15 +125,27 @@ Build notes:
 
 ## CI and releases
 
-- `.github/workflows/ci.yml` runs on pushes to `main` and on pull requests:
+Versions follow SemVer (`0.1.0`, `0.2.0-rc.1`). The version lives in
+`version.sbt` and in the `host.defineController` call of the script;
+`PitchBendBridgeDefinition.getVersion` reads it from the generated
+`BuildInfo`. Do not bump versions by hand: the release workflow does it.
+
+- `.github/actions/verify` is shared by both workflows: it checks that
+  `version.sbt` and the script share a version, runs
   `node test/mock-host.test.js`, then
-  `sbt scalafmtCheckAll scalafmtSbtCheck test assembly`, and uploads the
-  `.bwextension` as an artifact.
-- `.github/workflows/release.yml` runs on a `v*` tag. It checks that the tag
-  matches the version in `build.sbt`, `PitchBendBridgeDefinition.getVersion`
-  and `host.defineController`, reuses `ci.yml`, and publishes a GitHub release
-  with `PitchBendBridge.control.js` and the `.bwextension` from that run. To
-  release, bump all three versions, merge, then push the tag.
+  `sbt scalafmtCheckAll scalafmtSbtCheck test assembly`.
+- `.github/workflows/ci.yml` runs it on pushes to `main` and on pull requests
+  and uploads the `.bwextension` as an artifact.
+- `.github/workflows/release.yml` is started by hand (Actions → Release → Run
+  workflow, on `main`) with a version. It sets the version in `version.sbt`
+  and the script, runs `verify`, pushes a "Release vX" commit and an annotated
+  tag to `main` atomically, and publishes a GitHub release with
+  `PitchBendBridge.control.js` and the `.bwextension`. A version with a
+  suffix becomes a prerelease. It relies on `main` accepting pushes from
+  `GITHUB_TOKEN`; branch protection that requires pull requests breaks it.
+- The release workflow edits the script's version with `sed`: it expects the
+  version argument of `host.defineController` alone on its line, indented by
+  two spaces and followed by a comma. Keep that layout.
 
 The editor setup targets VSCode with Metals (`.vscode/`, `.scalafmt.conf`);
 Metals imports the sbt build through Bloop.
