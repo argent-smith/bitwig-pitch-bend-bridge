@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+._*
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Node (tests run without dependencies, but guard against accidental installs)
+node_modules/
+npm-debug.log*
+
+# Claude Code: local settings and service files
+.claude/settings.local.json
+.claude/.cc-writes/
