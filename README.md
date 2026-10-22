@@ -21,7 +21,7 @@ Bitwig has no device or Grid module that sends channel Pitch Bend. This script f
 
 ## Installation
 
-1. Copy `PitchBendBridge.control.js` into the `Controller Scripts` folder of your Bitwig Studio user directory, for example `~/Documents/Bitwig Studio/Controller Scripts/` on macOS or `Documents\Bitwig Studio\Controller Scripts\` on Windows.
+1. Download `PitchBendBridge.control.js` from the [latest release](https://github.com/argent-smith/bitwig-pitch-bend-bridge/releases/latest) and copy it into the `Controller Scripts` folder of your Bitwig Studio user directory, for example `~/Documents/Bitwig Studio/Controller Scripts/` on macOS or `Documents\Bitwig Studio\Controller Scripts\` on Windows.
 2. In Bitwig: **Settings → Controllers → Add Controller → Mostly Random → Pitch Bend Bridge**.
 3. Choose the **MIDI output** port of your instrument.
 
@@ -68,6 +68,39 @@ A small test suite runs the script against a mock of the controller API with Nod
 ```sh
 node test/mock-host.test.js
 ```
+
+### Scala extension
+
+The same controller is also available as a Scala 3 port, packaged as a Bitwig
+Java extension. It appears as **Mostly Random → Pitch Bend Bridge (Scala)** and
+can be installed next to the script. Building requires a JDK 17+ and
+[sbt](https://www.scala-sbt.org/):
+
+```sh
+sbt test        # run the unit tests
+sbt scalafmtAll # format the code
+sbt assembly    # build target/PitchBendBridge.bwextension
+```
+
+Copy `target/PitchBendBridge.bwextension` into the `Extensions` folder of your
+Bitwig Studio user directory, for example
+`~/Documents/Bitwig Studio/Extensions/` on macOS. Each
+[release](https://github.com/argent-smith/bitwig-pitch-bend-bridge/releases)
+also has a ready-built `.bwextension` attached.
+
+### Continuous integration
+
+GitHub Actions runs both test suites, checks formatting and builds the
+extension on every pull request and push to `main`.
+
+To release, run **Actions → Release → Run workflow** on `main` and enter a
+[SemVer](https://semver.org/) version such as `0.2.0` (or `0.2.0-rc.1` for a
+prerelease). The workflow sets the version in the script and the build, tests
+and builds both forms, tags the release commit and publishes a GitHub release
+with `PitchBendBridge.control.js` and `PitchBendBridge.bwextension`.
+
+For VSCode, install the recommended Metals extension and open the repository
+folder; Metals imports the sbt build automatically.
 
 ## License
 

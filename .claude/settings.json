@@ -1,0 +1,8 @@
+{
+  "sandbox": {
+    "excludedCommands": ["sbt *"],
+    "network": {
+      "allowedDomains": ["repo1.maven.org", "maven.bitwig.com"]
+    }
+  }
+}

@@ -1,0 +1,26 @@
+# Tests both forms of the controller and builds the .bwextension.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Test and build
+    runs-on: ubuntu-latest
+    # maven.bitwig.com can be very slow; the sbt cache avoids it after the
+    # first successful run.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/verify
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bwextension
+          path: target/PitchBendBridge.bwextension
+          if-no-files-found: error
