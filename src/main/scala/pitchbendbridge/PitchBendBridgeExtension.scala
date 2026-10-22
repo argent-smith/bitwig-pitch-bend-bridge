@@ -9,24 +9,19 @@ import com.bitwig.extension.controller.api.{ControllerHost, CursorDeviceFollowMo
 
 import Bridge.*
 import Bridge.Event.*
+import Bridge.Command.*
 
-// The imperative shell: wires Bitwig observers to Bridge.step and sends the
-// resulting messages. All observers, cursors and settings are created inside
-// `init`; the Bitwig API does not allow creating them later.
+// The imperative shell: wires Bitwig observers to Bridge.step and executes
+// the resulting commands. All observers, cursors and settings are created
+// inside `init`; the Bitwig API does not allow creating them later.
 final class PitchBendBridgeExtension(definition: PitchBendBridgeDefinition, host: ControllerHost)
     extends ControllerExtension(definition, host):
 
-  // Set in `init`: the MIDI output port is only available from then on.
+  // Set in `init`: the MIDI output port and the cursors exist only from then on.
   private var dispatch: Event => Unit = _ => ()
 
   override def init(): Unit =
     val midiOut = getMidiOutPort(0)
-    var state = State()
-
-    dispatch = event =>
-      val (next, messages) = Bridge.step(state, event)
-      state = next
-      messages.foreach(m => midiOut.sendMidi(m.status, m.lsb, m.msb))
 
     // The cursors follow the selection until they are pinned with "Pin".
     val cursorTrack = host.createCursorTrack("pbb-track", "Pitch Bend Bridge", 0, 0, true)
@@ -37,6 +32,26 @@ final class PitchBendBridgeExtension(definition: PitchBendBridgeDefinition, host
       CursorDeviceFollowMode.FOLLOW_SELECTION
     )
     val remotes = cursorDevice.createCursorRemoteControlsPage(RemoteCount)
+
+    // Pins the track before the device and releases them in reverse order.
+    def execute(command: Command): Unit = command match
+      case Send(m) =>
+        midiOut.sendMidi(m.status, m.lsb, m.msb)
+      case PinCursors =>
+        cursorTrack.isPinned.set(true)
+        cursorDevice.isPinned.set(true)
+      case FollowSelection =>
+        cursorDevice.isPinned.set(false)
+        cursorTrack.isPinned.set(false)
+      case Popup(text) =>
+        host.showPopupNotification(text)
+
+    var state = State()
+
+    dispatch = event =>
+      val (next, commands) = Bridge.step(state, event)
+      state = next
+      commands.foreach(execute)
 
     // Value including automation and modulation, 14-bit resolution.
     (0 until RemoteCount).foreach: i =>
@@ -71,19 +86,11 @@ final class PitchBendBridgeExtension(definition: PitchBendBridgeDefinition, host
 
     doc
       .getSignalSetting("Pin", "Source", "Pin selected device")
-      .addSignalObserver: () =>
-        cursorTrack.isPinned.set(true)
-        cursorDevice.isPinned.set(true)
-        host.showPopupNotification(s"PB Bridge → ${cursorTrack.name.get} / ${cursorDevice.name.get}")
-        dispatch(Pinned)
+      .addSignalObserver(() => dispatch(Pinned(cursorTrack.name.get, cursorDevice.name.get)))
 
     doc
       .getSignalSetting("Unpin", "Source", "Follow selection")
-      .addSignalObserver: () =>
-        cursorDevice.isPinned.set(false)
-        cursorTrack.isPinned.set(false)
-        dispatch(Unpinned)
-        host.showPopupNotification("PB Bridge: follows selection")
+      .addSignalObserver(() => dispatch(Unpinned))
 
     doc
       .getSignalSetting("Reset", "Output", "Center pitch bend")

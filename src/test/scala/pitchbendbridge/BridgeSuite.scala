@@ -5,26 +5,33 @@ package pitchbendbridge
 
 import Bridge.*
 import Bridge.Event.*
+import Bridge.Command.*
 
 // Ports test/mock-host.test.js to the functional core: instead of a mocked
-// Bitwig host, events are fed to Bridge.step and the MIDI triples are checked.
+// Bitwig host, events are fed to Bridge.step and the commands are checked.
 class BridgeSuite extends munit.FunSuite:
 
   // Bitwig calls the setting observers with their initial values during init;
-  // the messages they produce are dropped, as `loadScript` does in the JS test.
+  // the commands they produce are dropped, as `loadScript` does in the JS test.
   private val booted: State =
     run(State(), Seq(ChannelChanged(DefaultChannel), DeadbandChanged(DefaultDeadband), SourceChanged(1)))._1
 
-  private def run(state: State, events: Seq[Event]): (State, Vector[(Int, Int, Int)]) =
-    events.foldLeft((state, Vector.empty[(Int, Int, Int)])):
-      case ((s, sent), event) =>
-        val (next, messages) = Bridge.step(s, event)
-        (next, sent ++ messages.map(m => (m.status, m.lsb, m.msb)))
+  private def run(state: State, events: Seq[Event]): (State, Vector[Command]) =
+    events.foldLeft((state, Vector.empty[Command])):
+      case ((s, out), event) =>
+        val (next, commands) = Bridge.step(s, event)
+        (next, out ++ commands)
 
-  private def sent(events: Event*): Vector[(Int, Int, Int)] = run(booted, events)._2
+  private def commands(events: Event*): Vector[Command] = run(booted, events)._2
+
+  // Only the MIDI triples among the commands.
+  private def sent(events: Event*): Vector[(Int, Int, Int)] =
+    commands(events*).collect:
+      case Send(m) => (m.status, m.lsb, m.msb)
 
   private val bendDown = (0xe0, 0, 0)
   private val center = (0xe0, 0, 64)
+  private val pinned = Pinned("Bass", "Polymer")
 
   test("max value → 0x3FFF on channel 1"):
     assertEquals(sent(RemoteChanged(0, 16383)), Vector((0xe0, 127, 127)))
@@ -60,13 +67,30 @@ class BridgeSuite extends munit.FunSuite:
     assertEquals(sent(RemoteChanged(0, 0), DeviceExists(true)), Vector(bendDown))
 
   test("Pin re-sends the current value even if it was already sent"):
-    assertEquals(sent(RemoteChanged(0, 0), Pinned), Vector(bendDown, bendDown))
+    assertEquals(sent(RemoteChanged(0, 0), pinned), Vector(bendDown, bendDown))
 
   test("Pin before any value sends nothing"):
-    assertEquals(sent(Pinned), Vector.empty)
+    assertEquals(sent(pinned), Vector.empty)
+
+  test("Pin pins the cursors and names them before re-sending"):
+    assertEquals(
+      commands(RemoteChanged(0, 0), pinned),
+      Vector(Send(Message(1, 0)), PinCursors, Popup("PB Bridge → Bass / Polymer"), Send(Message(1, 0)))
+    )
 
   test("Unpin centers the bend"):
     assertEquals(sent(RemoteChanged(0, 0), Unpinned), Vector(bendDown, center))
+
+  test("Unpin follows the selection, centers the bend, then shows a popup"):
+    assertEquals(
+      commands(RemoteChanged(0, 0), Unpinned),
+      Vector(
+        Send(Message(1, 0)),
+        FollowSelection,
+        Send(Message(1, BendCenter)),
+        Popup("PB Bridge: follows selection")
+      )
+    )
 
   test("Reset centers the bend"):
     assertEquals(sent(RemoteChanged(0, 0), ResetPressed), Vector(bendDown, center))

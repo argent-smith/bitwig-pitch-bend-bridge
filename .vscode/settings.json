@@ -6,7 +6,12 @@
     "deadband",
     "munit",
     "pitchbendbridge",
-    "scalafmt"
+    "scalac",
+    "scalafmt",
+    "Wnonunit",
+    "Wsafe",
+    "Wunused",
+    "Wvalue"
   ],
   "[scala]": {
     "editor.defaultFormatter": "scalameta.metals",

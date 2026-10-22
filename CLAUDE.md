@@ -90,7 +90,9 @@ Behaviour must stay identical to the JavaScript script. The code is split into
 a functional core and an imperative shell:
 
 - `Bridge.scala` — pure: constants and setting defaults, `Message`, an
-  immutable `State` and `step(state, event) => (state, messages)`. `Message`
+  immutable `State` and `step(state, event) => (state, commands)`. `Command`
+  lists what the shell must do, in order: send MIDI, pin the cursors, follow
+  the selection again, show a popup. `Message`
   has a private constructor; its `apply` clamps the channel and the value, and
   the MIDI bytes are derived from them. Transitions are composed from `Step`
   functions with `>>`, and `withState` picks the next step by the current
@@ -98,9 +100,8 @@ a functional core and an imperative shell:
   before a forced send.
 - `PitchBendBridgeExtension.scala` — the only place with mutable state and
   Bitwig calls. It creates all observers in `init`, turns callbacks into
-  `Bridge.Event`s and sends the returned messages. The state is a local `var`
-  in `init`; the only mutable field is `dispatch`. Cursor pinning and popups
-  live here, not in the core.
+  `Bridge.Event`s and executes the returned commands in `execute`. The state is
+  a local `var` in `init`; the only mutable field is `dispatch`.
 - `PitchBendBridgeDefinition.scala` — metadata, registered through
   `src/main/resources/META-INF/services/com.bitwig.extension.ExtensionDefinition`.
   Its UUID intentionally differs from the JavaScript script so both can be
@@ -114,8 +115,9 @@ Build notes:
 - sbt-assembly bundles the Scala standard library into the jar; Bitwig does not
   provide it.
 - `BridgeSuite` ports `test/mock-host.test.js` to `Bridge.step` and adds
-  exhaustive checks of `Message` over all values and channels. The shell
-  (pinning, popups, observer wiring) has no automated tests.
+  exhaustive checks of `Message` over all values and channels. Pinning and
+  popups are checked as commands; the shell (`execute`, observer wiring) has
+  no automated tests.
 - `scalacOptions` enable `-Wunused:all`, `-Wvalue-discard`,
   `-Wnonunit-statement` and `-Wsafe-init`; the build must compile without
   warnings. `.scalafmt.conf` rewrites to Scala 3 syntax without optional

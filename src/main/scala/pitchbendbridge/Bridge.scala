@@ -3,9 +3,9 @@
 
 package pitchbendbridge
 
-// The functional core: Bitwig events go in, Pitch Bend messages come out.
-// Nothing here touches the Bitwig API; the extension only feeds events to
-// `step` and sends the returned messages.
+// The functional core: Bitwig events go in, commands come out. Nothing here
+// touches the Bitwig API; the extension only feeds events to `step` and
+// executes the returned commands.
 object Bridge:
 
   final val BendRange = 16384 // 14 bits: 0..16383
@@ -43,10 +43,17 @@ object Bridge:
     case ChannelChanged(channel: Int)
     case DeadbandChanged(steps: Int)
     case SourceChanged(remoteNumber: Int) // 1-based, as shown in settings
-    case Pinned
+    case Pinned(trackName: String, deviceName: String)
     case Unpinned
     case ResetPressed
     case Exited
+
+  // What the extension must do in Bitwig, in order.
+  enum Command:
+    case Send(message: Message)
+    case PinCursors
+    case FollowSelection // unpins the cursors
+    case Popup(text: String)
 
   // -------------------------------------------------------------------------
   // Pure functions
@@ -59,10 +66,10 @@ object Bridge:
     if math.abs(v - BendCenter) <= deadband then BendCenter else v
 
   // -------------------------------------------------------------------------
-  // Steps: state transitions that may produce messages
+  // Steps: state transitions that may produce commands
   // -------------------------------------------------------------------------
 
-  type Step = State => (State, Vector[Message])
+  type Step = State => (State, Vector[Command])
 
   extension (f: Step)
     def >>(g: Step): Step = s0 =>
@@ -77,10 +84,12 @@ object Bridge:
 
   private val noop: Step = modify(identity)
 
+  private def tell(command: Command): Step = s => (s, Vector(command))
+
   // Drops a value equal to the last one sent.
   private def send(msg: Message): Step = s =>
     if s.lastSent.contains(msg.value) then (s, Vector.empty)
-    else (s.copy(lastSent = Some(msg.value)), Vector(msg))
+    else (s.copy(lastSent = Some(msg.value)), Vector(Command.Send(msg)))
 
   private val forget: Step = modify(_.copy(lastSent = None))
 
@@ -92,7 +101,7 @@ object Bridge:
   private val reEmitCurrent: Step = forget >> withState(s => s.latest.get(s.remoteIndex).fold(noop)(emit))
 
   def transition(event: Event): Step =
-    import Event.*
+    import Event.*, Command.*
     event match
       case RemoteChanged(index, value) =>
         modify(s => s.copy(latest = s.latest.updated(index, value))) >>
@@ -106,7 +115,11 @@ object Bridge:
         modify(_.copy(deadband = steps))
       case SourceChanged(remoteNumber) =>
         modify(_.copy(remoteIndex = clamp(0, RemoteCount - 1)(remoteNumber - 1))) >> reEmitCurrent
-      case Pinned                           => reEmitCurrent
-      case Unpinned | ResetPressed | Exited => resetBend
+      case Pinned(trackName, deviceName) =>
+        tell(PinCursors) >> tell(Popup(s"PB Bridge → $trackName / $deviceName")) >> reEmitCurrent
+      case Unpinned =>
+        tell(FollowSelection) >> resetBend >> tell(Popup("PB Bridge: follows selection"))
+      case ResetPressed | Exited =>
+        resetBend
 
-  def step(state: State, event: Event): (State, Vector[Message]) = transition(event)(state)
+  def step(state: State, event: Event): (State, Vector[Command]) = transition(event)(state)
