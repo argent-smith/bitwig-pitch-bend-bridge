@@ -3,7 +3,7 @@
 //   sbt test       run the unit tests
 //   sbt assembly   build target/PitchBendBridge.bwextension
 
-ThisBuild / scalaVersion := "3.8.4"
+ThisBuild / scalaVersion := "3.10.0"
 
 // The version lives in version.sbt, where the release workflow sets it, and
 // reaches the extension definition through BuildInfo.
@@ -19,7 +19,7 @@ lazy val root = (project in file("."))
       "com.bitwig" % "extension-api" % "18" % Provided,
       "org.scalameta" %% "munit" % "1.3.6" % Test
     ),
-    // Bitwig 5 ships Java 21, Bitwig 6 ships Java 25; Scala 3.8 needs 17+.
+    // Bitwig 5 ships Java 21, Bitwig 6 ships Java 25; Scala 3.8+ needs 17+.
     scalacOptions ++= Seq(
       "-release",
       "17",

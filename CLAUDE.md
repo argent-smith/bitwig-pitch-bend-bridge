@@ -149,3 +149,10 @@ Versions follow SemVer (`0.1.0`, `0.2.0-rc.1`). The version lives in
 
 The editor setup targets VSCode with Metals (`.vscode/`, `.scalafmt.conf`);
 Metals imports the sbt build through Bloop.
+
+`.claude/settings.json` excludes `sbt` from the Claude Code sandbox: sbt
+writes JNI libraries to the system temp directory, binds a Unix socket for its
+boot server and, like any JVM tool, ignores the sandbox proxy. Run it as a
+bare `sbt ...` command (not after `cd ... &&`) so the exclusion matches. The
+sandbox allows `curl` to Maven Central and `maven.bitwig.com`, enough to look
+up the latest versions in `maven-metadata.xml`.
