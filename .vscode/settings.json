@@ -1,0 +1,26 @@
+{
+  "cSpell.words": [
+    "Bitwig",
+    "Bitwig's",
+    "bwextension",
+    "deadband",
+    "munit",
+    "pitchbendbridge",
+    "scalafmt"
+  ],
+  "[scala]": {
+    "editor.defaultFormatter": "scalameta.metals",
+    "editor.formatOnSave": true
+  },
+  "files.watcherExclude": {
+    "**/.bsp": true,
+    "**/target/**": true
+  },
+  "files.exclude": {
+    "**/.bloop": true,
+    "**/.bsp": true,
+    "**/.metals": true
+  },
+  "metals.inlayHints.inferredTypes.enable": true,
+  "metals.testUserInterface": "Test Explorer"
+}

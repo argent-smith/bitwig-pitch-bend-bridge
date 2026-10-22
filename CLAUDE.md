@@ -7,8 +7,12 @@ code in this repository.
 
 A Bitwig Studio controller script: it reads the modulated value of a Remote
 Control on a pinned device and sends it as 14-bit MIDI Pitch Bend to a MIDI
-output port. All code lives in one file, `PitchBendBridge.control.js`; there is
-no build step and no dependencies.
+output port. It exists in two forms:
+
+- `PitchBendBridge.control.js` — the original JavaScript controller script; no
+  build step and no dependencies.
+- `src/main/scala/` — a Scala 3 port packaged as a Java extension
+  (`.bwextension`), built with sbt. See "Scala port" below.
 
 The whole repository (code, comments, docs, commit messages) is in English.
 
@@ -71,3 +75,51 @@ mock of the Bitwig API:
 - Observers are looked up by setting label (`numbers["MIDI channel"]`,
   `signals["Pin"]`). Renaming a setting in the script requires updating the
   tests and the settings table in `README.md`.
+
+## Scala port
+
+```fish
+sbt test       # unit tests (munit)
+sbt assembly   # target/PitchBendBridge.bwextension
+```
+
+For a manual check in Bitwig, copy `target/PitchBendBridge.bwextension` to
+`~/Documents/Bitwig Studio/Extensions/`.
+
+Behaviour must stay identical to the JavaScript script. The code is split into
+a functional core and an imperative shell:
+
+- `Bridge.scala` — pure: constants and setting defaults, `Message`, an
+  immutable `State` and `step(state, event) => (state, messages)`. `Message`
+  has a private constructor; its `apply` clamps the channel and the value, and
+  the MIDI bytes are derived from them. Transitions are composed from `Step`
+  functions with `>>`, and `withState` picks the next step by the current
+  state; `send` drops a value equal to `lastSent`, and `forget` clears it
+  before a forced send.
+- `PitchBendBridgeExtension.scala` — the only place with mutable state and
+  Bitwig calls. It creates all observers in `init`, turns callbacks into
+  `Bridge.Event`s and sends the returned messages. The state is a local `var`
+  in `init`; the only mutable field is `dispatch`. Cursor pinning and popups
+  live here, not in the core.
+- `PitchBendBridgeDefinition.scala` — metadata, registered through
+  `src/main/resources/META-INF/services/com.bitwig.extension.ExtensionDefinition`.
+  Its UUID intentionally differs from the JavaScript script so both can be
+  installed at once; do not change it either.
+
+Build notes:
+
+- `com.bitwig:extension-api` comes from `https://maven.bitwig.com` and is
+  `Provided`: Bitwig supplies it at runtime. `getRequiredAPIVersion` and the
+  dependency version must match (18, as `loadAPI(18)` in the script).
+- sbt-assembly bundles the Scala standard library into the jar; Bitwig does not
+  provide it.
+- `BridgeSuite` ports `test/mock-host.test.js` to `Bridge.step` and adds
+  exhaustive checks of `Message` over all values and channels. The shell
+  (pinning, popups, observer wiring) has no automated tests.
+- `scalacOptions` enable `-Wunused:all`, `-Wvalue-discard`,
+  `-Wnonunit-statement` and `-Wsafe-init`; the build must compile without
+  warnings. `.scalafmt.conf` rewrites to Scala 3 syntax without optional
+  braces.
+
+The editor setup targets VSCode with Metals (`.vscode/`, `.scalafmt.conf`);
+Metals imports the sbt build through Bloop.

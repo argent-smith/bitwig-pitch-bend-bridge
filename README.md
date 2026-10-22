@@ -69,6 +69,25 @@ A small test suite runs the script against a mock of the controller API with Nod
 node test/mock-host.test.js
 ```
 
+### Scala extension
+
+The same controller is also available as a Scala 3 port, packaged as a Bitwig
+Java extension. It appears as **Mostly Random → Pitch Bend Bridge (Scala)** and
+can be installed next to the script. Building requires a JDK 17+ and
+[sbt](https://www.scala-sbt.org/):
+
+```sh
+sbt test        # run the unit tests
+sbt assembly    # build target/PitchBendBridge.bwextension
+```
+
+Copy `target/PitchBendBridge.bwextension` into the `Extensions` folder of your
+Bitwig Studio user directory, for example
+`~/Documents/Bitwig Studio/Extensions/` on macOS.
+
+For VSCode, install the recommended Metals extension and open the repository
+folder; Metals imports the sbt build automatically.
+
 ## License
 
 [MIT](LICENSE) © 2026 Pavel Argentov
